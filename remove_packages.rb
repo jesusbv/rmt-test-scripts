@@ -4,11 +4,10 @@
 # from RMT mirrored data
 class RemoveMirroredData
   def initialize(mirror_dir, num_packages, distro)
-    check_distro(distro)
+    check_distro(distro) unless distro.nil?
     check_num_packages(num_packages.to_i)
     @mirror_dir = mirror_dir
     @packages = []
-    @product = product
     @num_packages = num_packages.to_i || 0
     @distro = distro
   end
@@ -41,13 +40,31 @@ class RemoveMirroredData
     # mirror process replace directory joining
     # mirror base dir (../public/repo) + local path of the repo
     # Dir[@mirror_dir + "/**/#{distro}"].each { |f| Dir.rmdir f }
-    Dir[@mirror_dir + '/**/SLE-SAP/12-SP1/x86_64'].each { |f| puts f } # Dir.rmdir f }
+    all_paths = Dir[
+      File.join(@mirror_dir, "/**/#{@distro}"),
+      File.join(@mirror_dir, "/**/#{backport_format}")
+    ]
+    if all_paths.empty?
+      puts "No channels found for #{@distro}"
+      return
+    end
+
+    all_paths.each { |f| puts f}
+    # Dir[File.join(@mirror_dir, "/**/#{@distro}")].each { |f| puts f } # Dir.rmdir f }
   end
 
   private
 
+  def backport_format
+    # for example
+    # from SLE/12-SP5/x86_64 to SLE-12-SP5_x86_65
+    # from SLE/15/aarch64 to SLE-15_aarch64
+    backport = @distro.split('/')
+    return backport[0] + '-' + backport[1..backport.length].join('_')
+  end
+
   def check_distro(distro)
-    return if !distro.nil? && (distro.count('/') != 2 || distro.split('/').length != 3)
+    return if (distro.count('/') == 2 || distro.split('/').length == 3)
 
     raise 'Distribution must be formed as <product>/<version>/<arch>'
   end
